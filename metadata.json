@@ -1,0 +1,6 @@
+{
+  "name": "학습매니저",
+  "description": "학생 맞춤형 학습 진도 시각화 및 취약 과목 보완 추천 시스템",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
