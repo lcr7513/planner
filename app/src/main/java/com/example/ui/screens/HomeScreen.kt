@@ -19,6 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.RecommendationEntity
@@ -56,6 +57,15 @@ fun HomeScreen(
     var showAiTutorDialog by remember { mutableStateOf(false) }
     var aiTutorSubject by remember { mutableStateOf("수학") }
     var celebrationTitle by remember { mutableStateOf<String?>(null) }
+    var showEditProfileDialog by remember { mutableStateOf(false) }
+
+    val handleToggleRecommendation: (Long, Boolean) -> Unit = { recId, isCompleted ->
+        if (!isCompleted) {
+            val rec = uiState.recommendations.find { it.id == recId }
+            celebrationTitle = rec?.title ?: "추천 미션"
+        }
+        viewModel.toggleRecommendation(recId, isCompleted)
+    }
 
     Scaffold(
         modifier = modifier
@@ -64,7 +74,14 @@ fun HomeScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { showEditProfileDialog = true }
+                            .padding(vertical = 4.dp, horizontal = 4.dp)
+                            .testTag("header_profile_click_area")
+                    ) {
                         Surface(
                             shape = CircleShape,
                             color = MaterialTheme.colorScheme.primaryContainer,
@@ -73,23 +90,36 @@ fun HomeScreen(
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     imageVector = Icons.Default.School,
-                                    contentDescription = null,
+                                    contentDescription = "학생 프로필",
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column(modifier = Modifier.weight(1f, fill = false)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = uiState.studentName,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "이름 수정",
+                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
                             Text(
-                                text = "학습매니저",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                            Text(
-                                text = "${uiState.studentName} · ${uiState.gradeLevel}",
+                                text = uiState.gradeLevel,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
@@ -241,9 +271,7 @@ fun HomeScreen(
                     onSubjectClinic = { subject ->
                         quizLaunchConfig = QuizLaunchConfig(subject, isAiGenerated = false)
                     },
-                    onToggleRecommendation = { recId, isCompleted ->
-                        viewModel.toggleRecommendation(recId, isCompleted)
-                    },
+                    onToggleRecommendation = handleToggleRecommendation,
                     onRecommendationAction = { rec ->
                         if (rec.type == RecommendationType.CLINIC_QUIZ) {
                             val targetSub = uiState.subjects.find { it.id == rec.subjectId }
@@ -275,9 +303,7 @@ fun HomeScreen(
 
                 2 -> RecommendationTabContent(
                     uiState = uiState,
-                    onToggleRecommendation = { recId, isCompleted ->
-                        viewModel.toggleRecommendation(recId, isCompleted)
-                    },
+                    onToggleRecommendation = handleToggleRecommendation,
                     onRecommendationAction = { rec ->
                         if (rec.type == RecommendationType.CLINIC_QUIZ) {
                             val targetSub = uiState.subjects.find { it.id == rec.subjectId }
@@ -377,6 +403,24 @@ fun HomeScreen(
         AiTutorDialog(
             initialSubject = aiTutorSubject,
             onDismiss = { showAiTutorDialog = false }
+        )
+    }
+
+    celebrationTitle?.let { title ->
+        RecommendationCelebrationDialog(
+            completedTitle = title,
+            onDismiss = { celebrationTitle = null }
+        )
+    }
+
+    if (showEditProfileDialog) {
+        EditStudentProfileDialog(
+            currentName = uiState.studentName,
+            currentGrade = uiState.gradeLevel,
+            onDismiss = { showEditProfileDialog = false },
+            onSave = { newName, newGrade ->
+                viewModel.updateStudentProfile(newName, newGrade)
+            }
         )
     }
 }

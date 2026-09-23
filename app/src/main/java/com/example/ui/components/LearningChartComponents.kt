@@ -181,35 +181,40 @@ fun LearningProgressDashboardCard(
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
                         shape = RoundedCornerShape(16.dp)
                     )
-                    .padding(vertical = 12.dp, horizontal = 8.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                    .padding(vertical = 12.dp, horizontal = 4.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 StatItem(
                     label = "연속 학습",
                     value = "${streakDays}일차",
                     icon = Icons.Default.LocalFireDepartment,
-                    color = Color(0xFFD97706)
+                    color = Color(0xFFD97706),
+                    modifier = Modifier.weight(1f)
                 )
-                VerticalDivider(modifier = Modifier.height(30.dp))
+                VerticalDivider(modifier = Modifier.height(26.dp))
                 StatItem(
                     label = "평균 점수",
                     value = "${averageScore}점",
                     icon = Icons.AutoMirrored.Filled.TrendingUp,
-                    color = if (averageScore >= 80) EduGreenSuccess else EduAmberWarning
+                    color = if (averageScore >= 80) EduGreenSuccess else EduAmberWarning,
+                    modifier = Modifier.weight(1f)
                 )
-                VerticalDivider(modifier = Modifier.height(30.dp))
+                VerticalDivider(modifier = Modifier.height(26.dp))
                 StatItem(
                     label = "누적 학습",
                     value = "${totalMinutes / 60}h ${totalMinutes % 60}m",
                     icon = Icons.Default.Schedule,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f)
                 )
-                VerticalDivider(modifier = Modifier.height(30.dp))
+                VerticalDivider(modifier = Modifier.height(26.dp))
                 StatItem(
                     label = "보완 대상",
                     value = "${weakCount}과목",
                     icon = Icons.Default.WarningAmber,
-                    color = if (weakCount > 0) EduRedAlert else EduGreenSuccess
+                    color = if (weakCount > 0) EduRedAlert else EduGreenSuccess,
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
@@ -433,29 +438,36 @@ fun StatItem(
     label: String,
     value: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    color: Color
+    color: Color,
+    modifier: Modifier = Modifier
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier.padding(horizontal = 2.dp)
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = color,
-                modifier = Modifier.size(13.dp)
+                modifier = Modifier.size(12.dp)
             )
-            Spacer(modifier = Modifier.width(3.dp))
+            Spacer(modifier = Modifier.width(2.dp))
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
             )
         }
-        Spacer(modifier = Modifier.height(3.dp))
+        Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium,
+            fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1
         )
     }
 }

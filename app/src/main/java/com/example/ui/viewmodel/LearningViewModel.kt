@@ -15,6 +15,11 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+data class StudentProfile(
+    val name: String = "김민수 학생",
+    val gradeLevel: String = "중학 3학년 (목표: 고입/내신 대비)"
+)
+
 data class LearningUiState(
     val studentName: String = "김민수 학생",
     val gradeLevel: String = "중학 3학년 (목표: 고입/내신 대비)",
@@ -47,16 +52,20 @@ class LearningViewModel(application: Application) : AndroidViewModel(application
 
     private val _selectedTab = MutableStateFlow(0)
     private val _streakDays = MutableStateFlow(7)
-    private val _studentName = MutableStateFlow("김민수 학생")
+    private val _studentProfile = MutableStateFlow(StudentProfile())
     private val _hideCompletedRecs = MutableStateFlow(true)
+
+    // Combine uiConfig (tab, hideCompleted, profile) into a single flow
+    private val _uiConfig = combine(_selectedTab, _hideCompletedRecs, _studentProfile) { tab, hideCompleted, profile ->
+        Triple(tab, hideCompleted, profile)
+    }
 
     val uiState: StateFlow<LearningUiState> = combine(
         repository.allSubjects,
         repository.allRecommendations,
         repository.allLogs,
-        _selectedTab,
-        _hideCompletedRecs
-    ) { subjects, recommendations, logs, tab, hideCompleted ->
+        _uiConfig
+    ) { subjects, recommendations, logs, (tab, hideCompleted, profile) ->
         val weak = subjects.filter { it.currentScore < 70 || it.isWeak }
         val totalUnits = subjects.sumOf { it.totalUnits }
         val completedUnits = subjects.sumOf { it.completedUnits }
@@ -81,7 +90,8 @@ class LearningViewModel(application: Application) : AndroidViewModel(application
         val totalMins = subjects.sumOf { it.totalStudyMinutes }
 
         LearningUiState(
-            studentName = _studentName.value,
+            studentName = profile.name,
+            gradeLevel = profile.gradeLevel,
             subjects = subjects,
             weakSubjects = weak,
             recommendations = recommendations,
@@ -104,6 +114,14 @@ class LearningViewModel(application: Application) : AndroidViewModel(application
 
     fun setSelectedTab(tab: Int) {
         _selectedTab.value = tab
+    }
+
+    fun updateStudentProfile(name: String, grade: String) {
+        val current = _studentProfile.value
+        _studentProfile.value = current.copy(
+            name = if (name.isNotBlank()) name else current.name,
+            gradeLevel = if (grade.isNotBlank()) grade else current.gradeLevel
+        )
     }
 
     fun toggleHideCompletedRecommendations() {
