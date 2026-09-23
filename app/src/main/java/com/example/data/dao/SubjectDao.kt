@@ -1,6 +1,7 @@
 package com.example.data.dao
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -31,9 +32,12 @@ interface SubjectDao {
     @Query("UPDATE subjects SET currentScore = :newScore, isWeak = CASE WHEN :newScore < 70 THEN 1 ELSE 0 END WHERE id = :subjectId")
     suspend fun updateScore(subjectId: Long, newScore: Int)
 
-    @Query("UPDATE subjects SET completedUnits = :units, totalStudyMinutes = totalStudyMinutes + :addMinutes WHERE id = :subjectId")
+    @Query("UPDATE subjects SET completedUnits = :units, progress = CASE WHEN totalUnits > 0 THEN CAST(:units AS REAL) / CAST(totalUnits AS REAL) ELSE 0.0 END, totalStudyMinutes = totalStudyMinutes + :addMinutes WHERE id = :subjectId")
     suspend fun updateProgressAndStudyTime(subjectId: Long, units: Int, addMinutes: Int)
 
+    @Delete
+    suspend fun deleteSubject(subject: SubjectEntity)
+
     @Query("DELETE FROM subjects WHERE id = :id")
-    suspend fun deleteSubject(id: Long)
+    suspend fun deleteSubjectById(id: Long)
 }

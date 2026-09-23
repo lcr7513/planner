@@ -48,12 +48,14 @@ fun HomeScreen(
     var showAddStudyDialog by remember { mutableStateOf(false) }
     var selectedSubjectForStudy by remember { mutableStateOf<Long?>(null) }
     var showAddSubjectDialog by remember { mutableStateOf(false) }
+    var subjectToDelete by remember { mutableStateOf<SubjectEntity?>(null) }
 
     var quizLaunchConfig by remember { mutableStateOf<QuizLaunchConfig?>(null) }
     var conceptTargetRec by remember { mutableStateOf<RecommendationEntity?>(null) }
     var showDailyReportDialog by remember { mutableStateOf(false) }
     var showAiTutorDialog by remember { mutableStateOf(false) }
     var aiTutorSubject by remember { mutableStateOf("수학") }
+    var celebrationTitle by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         modifier = modifier
@@ -253,7 +255,9 @@ fun HomeScreen(
                         }
                     },
                     onGoToWeakTab = { viewModel.setSelectedTab(2) },
-                    onOpenDailyReport = { showDailyReportDialog = true }
+                    onOpenDailyReport = { showDailyReportDialog = true },
+                    onAddNewSubject = { showAddSubjectDialog = true },
+                    onDeleteSubject = { subjectToDelete = it }
                 )
 
                 1 -> ProgressTabContent(
@@ -265,7 +269,8 @@ fun HomeScreen(
                     onSubjectClinic = { subject ->
                         quizLaunchConfig = QuizLaunchConfig(subject, isAiGenerated = false)
                     },
-                    onAddNewSubject = { showAddSubjectDialog = true }
+                    onAddNewSubject = { showAddSubjectDialog = true },
+                    onDeleteSubject = { subjectToDelete = it }
                 )
 
                 2 -> RecommendationTabContent(
@@ -329,6 +334,17 @@ fun HomeScreen(
         )
     }
 
+    subjectToDelete?.let { subject ->
+        SubjectDeleteConfirmDialog(
+            subject = subject,
+            onConfirm = {
+                viewModel.deleteSubject(subject.id)
+                subjectToDelete = null
+            },
+            onDismiss = { subjectToDelete = null }
+        )
+    }
+
     quizLaunchConfig?.let { config ->
         DiagnosticQuizDialog(
             subjectName = config.subject.name,
@@ -373,7 +389,9 @@ fun DashboardTabContent(
     onToggleRecommendation: (Long, Boolean) -> Unit,
     onRecommendationAction: (RecommendationEntity) -> Unit,
     onGoToWeakTab: () -> Unit,
-    onOpenDailyReport: () -> Unit
+    onOpenDailyReport: () -> Unit,
+    onAddNewSubject: () -> Unit,
+    onDeleteSubject: (SubjectEntity) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -482,6 +500,107 @@ fun DashboardTabContent(
             WeeklyStudyBarChart(weeklyMinutes = uiState.weeklyMinutes)
         }
 
+        // 📚 관리 중인 학습 과목 리스트 (Main Dashboard Subject Management Section)
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "📚 관리 중인 학습 과목",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Text(
+                            text = "${uiState.subjects.size}과목",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+
+                FilledTonalButton(
+                    onClick = onAddNewSubject,
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                    modifier = Modifier
+                        .height(34.dp)
+                        .testTag("btn_add_subject_main")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("과목 추가", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
+        if (uiState.subjects.isEmpty()) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(44.dp)
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = "등록된 학습 과목이 없습니다",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "새로운 과목을 추가하여 목표 점수와 진도를 체계적으로 관리해 보세요.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Button(
+                            onClick = onAddNewSubject,
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("첫 과목 등록하기", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        } else {
+            items(uiState.subjects, key = { it.id }) { subject ->
+                SubjectProgressCard(
+                    subject = subject,
+                    onAddStudyClick = { onSubjectAddStudy(subject.id) },
+                    onClinicClick = { onSubjectClinic(subject) },
+                    onDeleteClick = { onDeleteSubject(subject) }
+                )
+            }
+        }
+
         // Today's personalized recommendation missions
         item {
             Row(
@@ -584,7 +703,8 @@ fun ProgressTabContent(
     uiState: LearningUiState,
     onSubjectAddStudy: (Long) -> Unit,
     onSubjectClinic: (SubjectEntity) -> Unit,
-    onAddNewSubject: () -> Unit
+    onAddNewSubject: () -> Unit,
+    onDeleteSubject: (SubjectEntity) -> Unit = {}
 ) {
     var filterType by remember { mutableIntStateOf(0) } // 0: 전체, 1: 취약 과목, 2: 양호/우수
 
@@ -645,12 +765,36 @@ fun ProgressTabContent(
             }
         }
 
-        items(filteredSubjects, key = { it.id }) { subject ->
-            SubjectProgressCard(
-                subject = subject,
-                onAddStudyClick = { onSubjectAddStudy(subject.id) },
-                onClinicClick = { onSubjectClinic(subject) }
-            )
+        if (filteredSubjects.isEmpty()) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (filterType == 1) "취약 과목으로 분류된 과목이 없습니다! 🎉" else "해당 분류의 과목이 없습니다.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        } else {
+            items(filteredSubjects, key = { it.id }) { subject ->
+                SubjectProgressCard(
+                    subject = subject,
+                    onAddStudyClick = { onSubjectAddStudy(subject.id) },
+                    onClinicClick = { onSubjectClinic(subject) },
+                    onDeleteClick = { onDeleteSubject(subject) }
+                )
+            }
         }
 
         item {

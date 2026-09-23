@@ -16,8 +16,9 @@ data class SubjectEntity(
     val isWeak: Boolean = false,// whether flagged as weak subject
     val weakTopic: String = "", // e.g. "이차방정식과 함수", "문법 및 관계대명사"
     val colorHex: String = "#4F46E5",
-    val lastStudiedDate: String = "오늘"
+    val lastStudiedDate: String = "오늘",
+    val progress: Float = if (totalUnits > 0) (completedUnits.toFloat() / totalUnits.toFloat()).coerceIn(0f, 1f) else 0f
 ) {
     val progressPercent: Float
-        get() = if (totalUnits > 0) (completedUnits.toFloat() / totalUnits.toFloat()).coerceIn(0f, 1f) else 0f
+        get() = progress.coerceIn(0f, 1f)
 }

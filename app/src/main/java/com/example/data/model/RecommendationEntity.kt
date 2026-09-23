@@ -22,5 +22,7 @@ data class RecommendationEntity(
     val actionLabel: String = "실행하기",
     val isCompleted: Boolean = false,
     val targetTopic: String = "",
-    val estimatedMinutes: Int = 15
+    val estimatedMinutes: Int = 15,
+    val priority: Int = 1, // 1: high, 2: medium, 3: low
+    val createdAt: Long = System.currentTimeMillis()
 )

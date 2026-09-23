@@ -21,6 +21,9 @@ data class LearningUiState(
     val subjects: List<SubjectEntity> = emptyList(),
     val weakSubjects: List<SubjectEntity> = emptyList(),
     val recommendations: List<RecommendationEntity> = emptyList(),
+    val activeRecommendations: List<RecommendationEntity> = emptyList(),
+    val completedRecommendationsCount: Int = 0,
+    val hideCompletedRecommendations: Boolean = true,
     val recentLogs: List<StudyLogEntity> = emptyList(),
     val totalStudyMinutes: Int = 0,
     val streakDays: Int = 7,
@@ -45,18 +48,23 @@ class LearningViewModel(application: Application) : AndroidViewModel(application
     private val _selectedTab = MutableStateFlow(0)
     private val _streakDays = MutableStateFlow(7)
     private val _studentName = MutableStateFlow("김민수 학생")
+    private val _hideCompletedRecs = MutableStateFlow(true)
 
     val uiState: StateFlow<LearningUiState> = combine(
         repository.allSubjects,
         repository.allRecommendations,
         repository.allLogs,
-        _selectedTab
-    ) { subjects, recommendations, logs, tab ->
+        _selectedTab,
+        _hideCompletedRecs
+    ) { subjects, recommendations, logs, tab, hideCompleted ->
         val weak = subjects.filter { it.currentScore < 70 || it.isWeak }
         val totalUnits = subjects.sumOf { it.totalUnits }
         val completedUnits = subjects.sumOf { it.completedUnits }
         val overallProg = if (totalUnits > 0) completedUnits.toFloat() / totalUnits.toFloat() else 0f
         val avgScore = if (subjects.isNotEmpty()) subjects.map { it.currentScore }.average().toInt() else 0
+
+        val completedCount = recommendations.count { it.isCompleted }
+        val activeRecs = recommendations.filter { !it.isCompleted }
 
         // Calculate weekly minutes from logs
         val dayMinutes = IntArray(7) { 0 }
@@ -77,6 +85,9 @@ class LearningViewModel(application: Application) : AndroidViewModel(application
             subjects = subjects,
             weakSubjects = weak,
             recommendations = recommendations,
+            activeRecommendations = activeRecs,
+            completedRecommendationsCount = completedCount,
+            hideCompletedRecommendations = hideCompleted,
             recentLogs = logs.take(7),
             totalStudyMinutes = totalMins,
             streakDays = _streakDays.value,
@@ -93,6 +104,23 @@ class LearningViewModel(application: Application) : AndroidViewModel(application
 
     fun setSelectedTab(tab: Int) {
         _selectedTab.value = tab
+    }
+
+    fun toggleHideCompletedRecommendations() {
+        _hideCompletedRecs.value = !_hideCompletedRecs.value
+    }
+
+    fun clearCompletedRecommendations() {
+        viewModelScope.launch {
+            repository.deleteCompletedRecommendations()
+        }
+    }
+
+    fun refreshSmartRecommendations() {
+        viewModelScope.launch {
+            val curSubjects = uiState.value.subjects
+            repository.resetAndRefreshSmartRecommendations(curSubjects)
+        }
     }
 
     fun toggleRecommendation(recId: Long, currentCompleted: Boolean) {
@@ -208,6 +236,12 @@ class LearningViewModel(application: Application) : AndroidViewModel(application
     fun deleteSubject(id: Long) {
         viewModelScope.launch {
             repository.deleteSubject(id)
+        }
+    }
+
+    fun deleteSubject(subject: SubjectEntity) {
+        viewModelScope.launch {
+            repository.deleteSubject(subject)
         }
     }
 

@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.DonutLarge
 import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.LocalFireDepartment
@@ -567,6 +568,7 @@ fun SubjectProgressCard(
     subject: SubjectEntity,
     onAddStudyClick: () -> Unit,
     onClinicClick: () -> Unit,
+    onDeleteClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val progressColor = when {
@@ -641,29 +643,40 @@ fun SubjectProgressCard(
             // Progress bar and Unit numbers
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "학습 완료도",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "(${subject.completedUnits}/${subject.totalUnits} 단원)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 Text(
-                    text = "단원 진도: ${subject.completedUnits}/${subject.totalUnits} 단원 완료",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "${(subject.progressPercent * 100).toInt()}%",
+                    text = "${(subject.progress * 100).toInt()}% 완료",
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = progressColor
                 )
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             LinearProgressIndicator(
-                progress = { subject.progressPercent },
+                progress = { subject.progress.coerceIn(0f, 1f) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp)),
+                    .height(10.dp)
+                    .clip(RoundedCornerShape(5.dp))
+                    .testTag("progress_bar_${subject.id}"),
                 color = progressColor,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             )
@@ -700,42 +713,65 @@ fun SubjectProgressCard(
             // Action row
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedButton(
-                    onClick = onAddStudyClick,
-                    shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                    modifier = Modifier.height(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = "학습 기록", fontSize = 12.sp)
+                if (onDeleteClick != null) {
+                    IconButton(
+                        onClick = onDeleteClick,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .testTag("delete_subject_${subject.id}")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DeleteOutline,
+                            contentDescription = "${subject.name} 과목 삭제",
+                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                } else {
+                    Spacer(modifier = Modifier.width(1.dp))
                 }
 
-                if (subject.isWeak || subject.currentScore < 70) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
-                        onClick = onClinicClick,
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedButton(
+                        onClick = onAddStudyClick,
                         shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = EduAmberWarning,
-                            contentColor = Color.White
-                        ),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                         modifier = Modifier.height(36.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.AutoAwesome,
+                            imageVector = Icons.Default.Add,
                             contentDescription = null,
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "취약점 클리닉", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "학습 기록", fontSize = 12.sp)
+                    }
+
+                    if (subject.isWeak || subject.currentScore < 70) {
+                        Button(
+                            onClick = onClinicClick,
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = EduAmberWarning,
+                                contentColor = Color.White
+                            ),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                            modifier = Modifier.height(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(text = "취약점 클리닉", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }

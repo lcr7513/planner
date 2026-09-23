@@ -10,8 +10,11 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface RecommendationDao {
-    @Query("SELECT * FROM recommendations ORDER BY isCompleted ASC, id ASC")
+    @Query("SELECT * FROM recommendations ORDER BY isCompleted ASC, priority ASC, id ASC")
     fun getAllRecommendations(): Flow<List<RecommendationEntity>>
+
+    @Query("SELECT * FROM recommendations WHERE isCompleted = 0 ORDER BY priority ASC, id ASC")
+    fun getActiveRecommendations(): Flow<List<RecommendationEntity>>
 
     @Query("SELECT * FROM recommendations WHERE subjectId = :subjectId ORDER BY isCompleted ASC")
     fun getRecommendationsForSubject(subjectId: Long): Flow<List<RecommendationEntity>>
@@ -30,4 +33,13 @@ interface RecommendationDao {
 
     @Query("DELETE FROM recommendations WHERE id = :id")
     suspend fun deleteRecommendation(id: Long)
+
+    @Query("DELETE FROM recommendations WHERE isCompleted = 1")
+    suspend fun deleteCompletedRecommendations()
+
+    @Query("DELETE FROM recommendations")
+    suspend fun deleteAllRecommendations()
+
+    @Query("DELETE FROM recommendations WHERE subjectId = :subjectId")
+    suspend fun deleteRecommendationsBySubjectId(subjectId: Long)
 }
