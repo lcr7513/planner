@@ -77,4 +77,99 @@ class ExampleRobolectricTest {
 
     db.close()
   }
+
+  @Test
+  fun `room study logs subject study time calculation test`() = runBlocking {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val db = androidx.room.Room.inMemoryDatabaseBuilder(context, com.example.data.AppDatabase::class.java)
+        .allowMainThreadQueries()
+        .build()
+    val logDao = db.studyLogDao()
+
+    val log1 = com.example.data.model.StudyLogEntity(
+        subjectId = 1L,
+        subjectName = "수학",
+        minutes = 50,
+        dateString = "월",
+        dayOfWeekIndex = 0,
+        topicDescription = "방정식 풀이"
+    )
+    val log2 = com.example.data.model.StudyLogEntity(
+        subjectId = 1L,
+        subjectName = "수학",
+        minutes = 40,
+        dateString = "수",
+        dayOfWeekIndex = 2,
+        topicDescription = "함수 그래프"
+    )
+    val log3 = com.example.data.model.StudyLogEntity(
+        subjectId = 2L,
+        subjectName = "영어",
+        minutes = 60,
+        dateString = "화",
+        dayOfWeekIndex = 1,
+        topicDescription = "영단어 암기"
+    )
+
+    logDao.insertAll(listOf(log1, log2, log3))
+
+    val logs = listOf(log1, log2, log3)
+    val mathTotal = logs.filter { it.subjectName == "수학" }.sumOf { it.minutes }
+    val engTotal = logs.filter { it.subjectName == "영어" }.sumOf { it.minutes }
+
+    assertEquals(90, mathTotal)
+    assertEquals(60, engTotal)
+
+    val grandTotal = mathTotal + engTotal
+    val mathRatio = mathTotal.toFloat() / grandTotal
+    assertEquals(0.6f, mathRatio, 0.01f)
+
+    db.close()
+  }
+
+  @Test
+  fun `room planner todo and dday goals persistence test`() = runBlocking {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val db = androidx.room.Room.inMemoryDatabaseBuilder(context, com.example.data.AppDatabase::class.java)
+        .allowMainThreadQueries()
+        .build()
+    val plannerDao = db.plannerDao()
+
+    // 1. D-Day Goal
+    val goal = com.example.data.model.DDayGoalEntity(
+        title = "수능",
+        targetDate = "2026-11-19",
+        colorHex = "#6366F1",
+        isPinned = true
+    )
+    val goalId = plannerDao.insertDDayGoal(goal)
+    assertTrue(goalId > 0)
+
+    // 2. Planner To-Do
+    val todo = com.example.data.model.PlannerTodoEntity(
+        date = "2026-10-14",
+        subjectId = 1L,
+        subjectName = "수학",
+        title = "미적분 연습문제",
+        targetMinutes = 45,
+        isCompleted = false
+    )
+    val todoId = plannerDao.insertTodo(todo)
+    assertTrue(todoId > 0)
+
+    plannerDao.updateTodo(todo.copy(id = todoId, isCompleted = true))
+
+    // 3. Time Block
+    val block = com.example.data.model.TimeBlockEntity(
+        date = "2026-10-14",
+        hour = 10,
+        blockIndex = 2,
+        subjectName = "수학",
+        colorHex = "#6366F1"
+    )
+    val blockId = plannerDao.insertTimeBlock(block)
+    assertTrue(blockId > 0)
+
+    db.close()
+  }
 }

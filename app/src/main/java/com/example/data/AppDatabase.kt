@@ -5,30 +5,41 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.example.data.dao.PlannerDao
 import com.example.data.dao.RecommendationDao
 import com.example.data.dao.StudyLogDao
 import com.example.data.dao.SubjectDao
+import com.example.data.model.DDayGoalEntity
+import com.example.data.model.PlannerTodoEntity
 import com.example.data.model.RecommendationEntity
 import com.example.data.model.RecommendationType
 import com.example.data.model.StudyLogEntity
 import com.example.data.model.SubjectEntity
+import com.example.data.model.TimeBlockEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Database(
     entities = [
         SubjectEntity::class,
         StudyLogEntity::class,
-        RecommendationEntity::class
+        RecommendationEntity::class,
+        PlannerTodoEntity::class,
+        DDayGoalEntity::class,
+        TimeBlockEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun subjectDao(): SubjectDao
     abstract fun studyLogDao(): StudyLogDao
     abstract fun recommendationDao(): RecommendationDao
+    abstract fun plannerDao(): PlannerDao
 
     companion object {
         @Volatile
@@ -195,6 +206,85 @@ abstract class AppDatabase : RoomDatabase() {
                     )
                 )
                 recDao.insertAll(recommendations)
+
+                // Initial D-Day Goals & Planner Seed
+                val plannerDao = db.plannerDao()
+                val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.KOREA).format(Date())
+
+                plannerDao.insertDDayGoals(
+                    listOf(
+                        DDayGoalEntity(
+                            title = "2027학년도 대학수학능력시험",
+                            targetDate = "2026-11-19",
+                            colorHex = "#6366F1",
+                            isPinned = true
+                        ),
+                        DDayGoalEntity(
+                            title = "2학기 기말고사 전과목 만점",
+                            targetDate = "2026-12-10",
+                            colorHex = "#EC4899",
+                            isPinned = false
+                        ),
+                        DDayGoalEntity(
+                            title = "전국 연합 학력평가(모의고사)",
+                            targetDate = "2026-10-28",
+                            colorHex = "#10B981",
+                            isPinned = false
+                        )
+                    )
+                )
+
+                plannerDao.insertTodos(
+                    listOf(
+                        PlannerTodoEntity(
+                            date = todayStr,
+                            subjectId = mathId,
+                            subjectName = "수학",
+                            title = "수능 기출 이차함수 고난도 5제 풀이",
+                            targetMinutes = 50,
+                            isCompleted = true
+                        ),
+                        PlannerTodoEntity(
+                            date = todayStr,
+                            subjectId = engId,
+                            subjectName = "영어",
+                            title = "EBS 수능특강 2강 빈칸추론 3지문 분석",
+                            targetMinutes = 45,
+                            isCompleted = true
+                        ),
+                        PlannerTodoEntity(
+                            date = todayStr,
+                            subjectId = korId,
+                            subjectName = "국어",
+                            title = "문학 고전시가 핵심 10편 해제 노트 정리",
+                            targetMinutes = 40,
+                            isCompleted = false
+                        ),
+                        PlannerTodoEntity(
+                            date = todayStr,
+                            subjectId = sciId,
+                            subjectName = "과학",
+                            title = "물리학Ⅰ 역학적 에너지 보존 문제 풀이",
+                            targetMinutes = 40,
+                            isCompleted = false
+                        )
+                    )
+                )
+
+                // Initial 10-Minute Blocks for today
+                plannerDao.insertTimeBlocks(
+                    listOf(
+                        TimeBlockEntity(date = todayStr, hour = 9, blockIndex = 0, subjectName = "수학", colorHex = "#6366F1"),
+                        TimeBlockEntity(date = todayStr, hour = 9, blockIndex = 1, subjectName = "수학", colorHex = "#6366F1"),
+                        TimeBlockEntity(date = todayStr, hour = 9, blockIndex = 2, subjectName = "수학", colorHex = "#6366F1"),
+                        TimeBlockEntity(date = todayStr, hour = 10, blockIndex = 0, subjectName = "수학", colorHex = "#6366F1"),
+                        TimeBlockEntity(date = todayStr, hour = 10, blockIndex = 1, subjectName = "수학", colorHex = "#6366F1"),
+                        TimeBlockEntity(date = todayStr, hour = 14, blockIndex = 0, subjectName = "영어", colorHex = "#0EA5E9"),
+                        TimeBlockEntity(date = todayStr, hour = 14, blockIndex = 1, subjectName = "영어", colorHex = "#0EA5E9"),
+                        TimeBlockEntity(date = todayStr, hour = 14, blockIndex = 2, subjectName = "영어", colorHex = "#0EA5E9"),
+                        TimeBlockEntity(date = todayStr, hour = 14, blockIndex = 3, subjectName = "영어", colorHex = "#0EA5E9")
+                    )
+                )
             }
         }
     }

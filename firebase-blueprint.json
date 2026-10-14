@@ -1,0 +1,48 @@
+{
+  "entities": {
+    "User": {
+      "path": "users/{userId}",
+      "description": "User profile with study statistics and cloud sync status",
+      "fields": {
+        "uid": { "type": "string", "description": "User ID" },
+        "email": { "type": "string", "description": "User email" },
+        "displayName": { "type": "string", "description": "Display name" },
+        "lastSyncedAt": { "type": "number", "description": "Timestamp of last cloud sync" }
+      }
+    },
+    "StudyBackup": {
+      "path": "users/{userId}/backups/{backupId}",
+      "description": "Full cloud backup of user study records, planner to-dos, and D-day goals",
+      "fields": {
+        "backupId": { "type": "string", "description": "Unique backup ID" },
+        "createdAt": { "type": "number", "description": "Timestamp when backup was created" },
+        "payloadJson": { "type": "string", "description": "Serialized JSON snapshot of all planner data" },
+        "totalStudyMinutes": { "type": "number", "description": "Total study minutes logged" },
+        "completedTodosCount": { "type": "number", "description": "Number of completed to-dos" }
+      }
+    },
+    "PlannerTodo": {
+      "path": "users/{userId}/planner_todos/{todoId}",
+      "description": "Individual daily planner to-do item for cloud sync",
+      "fields": {
+        "id": { "type": "number", "description": "Local DB ID" },
+        "date": { "type": "string", "description": "YYYY-MM-DD" },
+        "title": { "type": "string", "description": "Task title" },
+        "subjectName": { "type": "string", "description": "Associated subject" },
+        "targetMinutes": { "type": "number", "description": "Target study duration in minutes" },
+        "isCompleted": { "type": "boolean", "description": "Completion flag" }
+      }
+    },
+    "DDayGoal": {
+      "path": "users/{userId}/dday_goals/{goalId}",
+      "description": "Target exam or milestone D-day goal",
+      "fields": {
+        "id": { "type": "number", "description": "Local DB ID" },
+        "title": { "type": "string", "description": "Target milestone title" },
+        "targetDate": { "type": "string", "description": "Target date string" },
+        "colorHex": { "type": "string", "description": "Hex color code" },
+        "isPinned": { "type": "boolean", "description": "Pinned status" }
+      }
+    }
+  }
+}

@@ -45,9 +45,11 @@ import com.example.ui.theme.EduRedAlert
 fun WeakSubjectDiagnosisBanner(
     weakSubjects: List<SubjectEntity>,
     onGeneratePlan: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isAnalyzing: Boolean = false,
+    aiSummary: String? = null
 ) {
-    if (weakSubjects.isEmpty()) {
+    if (weakSubjects.isEmpty() && aiSummary == null) {
         Card(
             modifier = modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
@@ -105,7 +107,7 @@ fun WeakSubjectDiagnosisBanner(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "취약 과목 진단 및 맞춤 솔루션",
+                        text = "Gemini AI 취약 과목 진단 & 처방",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF991B1B)
@@ -128,52 +130,125 @@ fun WeakSubjectDiagnosisBanner(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            Text(
-                text = "현재 이해도 70점 미만 또는 오답률이 높은 과목을 AI가 분석하여 보완 계획을 제안합니다.",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF7F1D1D)
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Badges of weak subjects
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                weakSubjects.forEach { sub ->
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = Color.White,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFCA5A5))
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = sub.name,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp,
-                                color = Color(0xFF991B1B)
+            if (!aiSummary.isNullOrBlank()) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color.White.copy(alpha = 0.9f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFCA5A5)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "${sub.currentScore}점",
-                                fontWeight = FontWeight.ExtraBold,
+                                text = "AI 종합 진단 리포트",
                                 fontSize = 12.sp,
-                                color = EduRedAlert
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
                             )
-                            if (sub.weakTopic.isNotBlank()) {
-                                Spacer(modifier = Modifier.width(4.dp))
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = aiSummary,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF4B5563),
+                            lineHeight = 18.sp
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+            } else {
+                Text(
+                    text = "Room DB에 누적된 성적 및 학습 기록을 Gemini AI가 분석하여 보완 계획을 제안합니다.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF7F1D1D)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            // Badges of weak subjects
+            if (weakSubjects.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    weakSubjects.forEach { sub ->
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color.White,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFCA5A5))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Text(
-                                    text = "(${sub.weakTopic})",
-                                    fontSize = 11.sp,
-                                    color = Color(0xFF6B7280)
+                                    text = sub.name,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF991B1B)
                                 )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "${sub.currentScore}점",
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 12.sp,
+                                    color = EduRedAlert
+                                )
+                                if (sub.weakTopic.isNotBlank()) {
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "(${sub.weakTopic})",
+                                        fontSize = 11.sp,
+                                        color = Color(0xFF6B7280)
+                                    )
+                                }
                             }
                         }
                     }
+                }
+                Spacer(modifier = Modifier.height(14.dp))
+            }
+
+            // AI Trigger Button
+            Button(
+                onClick = onGeneratePlan,
+                enabled = !isAnalyzing,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = EduRedAlert),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(42.dp)
+                    .testTag("btn_trigger_ai_analysis")
+            ) {
+                if (isAnalyzing) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Gemini가 학습 데이터를 분석하는 중...", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = Color.White
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (aiSummary == null) "AI 학습 데이터 심층 분석 및 과목 추천받기" else "AI 맞춤 추천 다시 생성하기",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
                 }
             }
         }

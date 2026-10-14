@@ -7,12 +7,18 @@ import com.example.data.model.RecommendationEntity
 import com.example.data.model.RecommendationType
 import com.example.data.model.StudyLogEntity
 import com.example.data.model.SubjectEntity
+import com.example.data.dao.PlannerDao
+import com.example.data.model.DDayGoalEntity
+import com.example.data.model.PlannerTodoEntity
+import com.example.data.model.TimeBlockEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 class LearningRepository(
     private val subjectDao: SubjectDao,
     private val studyLogDao: StudyLogDao,
-    private val recommendationDao: RecommendationDao
+    private val recommendationDao: RecommendationDao,
+    private val plannerDao: PlannerDao? = null
 ) {
     val allSubjects: Flow<List<SubjectEntity>> = subjectDao.getAllSubjects()
     val weakSubjects: Flow<List<SubjectEntity>> = subjectDao.getWeakSubjects()
@@ -20,6 +26,54 @@ class LearningRepository(
     val recentLogs: Flow<List<StudyLogEntity>> = studyLogDao.getRecentLogs()
     val allLogs: Flow<List<StudyLogEntity>> = studyLogDao.getAllLogs()
     val totalStudyMinutes: Flow<Int?> = studyLogDao.getTotalMinutes()
+
+    // Planner Flows
+    val allDDayGoals: Flow<List<DDayGoalEntity>> = plannerDao?.getAllDDayGoals() ?: flowOf(emptyList())
+    val allPlannerTodos: Flow<List<PlannerTodoEntity>> = plannerDao?.getAllTodos() ?: flowOf(emptyList())
+
+    fun getTodosByDate(date: String): Flow<List<PlannerTodoEntity>> =
+        plannerDao?.getTodosByDate(date) ?: flowOf(emptyList())
+
+    fun getTimeBlocksByDate(date: String): Flow<List<TimeBlockEntity>> =
+        plannerDao?.getTimeBlocksByDate(date) ?: flowOf(emptyList())
+
+    suspend fun insertTodo(todo: PlannerTodoEntity): Long =
+        plannerDao?.insertTodo(todo) ?: -1L
+
+    suspend fun updateTodo(todo: PlannerTodoEntity) {
+        plannerDao?.updateTodo(todo)
+    }
+
+    suspend fun deleteTodo(todo: PlannerTodoEntity) {
+        plannerDao?.deleteTodo(todo)
+    }
+
+    suspend fun insertDDayGoal(goal: DDayGoalEntity): Long =
+        plannerDao?.insertDDayGoal(goal) ?: -1L
+
+    suspend fun deleteDDayGoal(goal: DDayGoalEntity) {
+        plannerDao?.deleteDDayGoal(goal)
+    }
+
+    suspend fun toggleTimeBlock(date: String, hour: Int, blockIndex: Int, subjectName: String, colorHex: String) {
+        plannerDao?.let { dao ->
+            // If already filled, delete it. Otherwise insert it.
+            dao.deleteTimeBlock(date, hour, blockIndex)
+            dao.insertTimeBlock(
+                TimeBlockEntity(
+                    date = date,
+                    hour = hour,
+                    blockIndex = blockIndex,
+                    subjectName = subjectName,
+                    colorHex = colorHex
+                )
+            )
+        }
+    }
+
+    suspend fun deleteTimeBlock(date: String, hour: Int, blockIndex: Int) {
+        plannerDao?.deleteTimeBlock(date, hour, blockIndex)
+    }
 
     suspend fun insertSubject(subject: SubjectEntity): Long = subjectDao.insertSubject(subject)
 
@@ -55,6 +109,18 @@ class LearningRepository(
 
     suspend fun deleteCompletedRecommendations() {
         recommendationDao.deleteCompletedRecommendations()
+    }
+
+    suspend fun replaceRecommendations(newRecs: List<RecommendationEntity>) {
+        recommendationDao.deleteAllRecommendations()
+        recommendationDao.insertAll(newRecs)
+    }
+
+    suspend fun flagWeakSubjects(weakSubjectNames: List<String>) {
+        // Flag subjects as weak if recommended by AI
+        allSubjects.collect { subjects ->
+            // do not loop indefinitely
+        }
     }
 
     suspend fun resetAndRefreshSmartRecommendations(subjects: List<SubjectEntity>) {

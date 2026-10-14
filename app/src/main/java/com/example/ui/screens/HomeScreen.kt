@@ -154,6 +154,40 @@ fun HomeScreen(
                         }
                     }
                     IconButton(
+                        onClick = { viewModel.openStudygramDialog() },
+                        modifier = Modifier.testTag("open_studygram_button")
+                    ) {
+                        BadgedBox(
+                            badge = {
+                                Badge(containerColor = Color(0xFF6366F1)) { Text("SNS") }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "스터디그램 공유",
+                                tint = Color(0xFF6366F1)
+                            )
+                        }
+                    }
+                    IconButton(
+                        onClick = { viewModel.setShowCloudAccountDialog(true) },
+                        modifier = Modifier.testTag("open_cloud_account_button")
+                    ) {
+                        BadgedBox(
+                            badge = {
+                                if (uiState.firebaseUser != null) {
+                                    Badge(containerColor = Color(0xFF10B981)) { Text("연동") }
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CloudSync,
+                                contentDescription = "클라우드 백업",
+                                tint = if (uiState.firebaseUser != null) Color(0xFF059669) else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    IconButton(
                         onClick = { showDailyReportDialog = true },
                         modifier = Modifier.testTag("open_daily_report_button")
                     ) {
@@ -201,13 +235,27 @@ fun HomeScreen(
                 NavigationBarItem(
                     selected = uiState.selectedTab == 1,
                     onClick = { viewModel.setSelectedTab(1) },
+                    icon = { Icon(Icons.Default.Checklist, contentDescription = "플래너") },
+                    label = { Text("플래너") },
+                    modifier = Modifier.testTag("nav_tab_planner")
+                )
+                NavigationBarItem(
+                    selected = uiState.selectedTab == 2,
+                    onClick = { viewModel.setSelectedTab(2) },
+                    icon = { Icon(Icons.Default.Timer, contentDescription = "타이머") },
+                    label = { Text("타이머") },
+                    modifier = Modifier.testTag("nav_tab_timer")
+                )
+                NavigationBarItem(
+                    selected = uiState.selectedTab == 3,
+                    onClick = { viewModel.setSelectedTab(3) },
                     icon = { Icon(Icons.Default.BarChart, contentDescription = "진도 현황") },
                     label = { Text("진도 현황") },
                     modifier = Modifier.testTag("nav_tab_progress")
                 )
                 NavigationBarItem(
-                    selected = uiState.selectedTab == 2,
-                    onClick = { viewModel.setSelectedTab(2) },
+                    selected = uiState.selectedTab == 4,
+                    onClick = { viewModel.setSelectedTab(4) },
                     icon = {
                         BadgedBox(
                             badge = {
@@ -219,15 +267,8 @@ fun HomeScreen(
                             Icon(Icons.Default.AutoAwesome, contentDescription = "취약점 추천")
                         }
                     },
-                    label = { Text("취약점 추천") },
+                    label = { Text("AI 클리닉") },
                     modifier = Modifier.testTag("nav_tab_recommendations")
-                )
-                NavigationBarItem(
-                    selected = uiState.selectedTab == 3,
-                    onClick = { viewModel.setSelectedTab(3) },
-                    icon = { Icon(Icons.Default.School, contentDescription = "AI 튜터") },
-                    label = { Text("AI 튜터") },
-                    modifier = Modifier.testTag("nav_tab_ai_tutor")
                 )
             }
         },
@@ -282,13 +323,39 @@ fun HomeScreen(
                             conceptTargetRec = rec
                         }
                     },
-                    onGoToWeakTab = { viewModel.setSelectedTab(2) },
+                    onGoToWeakTab = { viewModel.setSelectedTab(4) },
                     onOpenDailyReport = { showDailyReportDialog = true },
                     onAddNewSubject = { showAddSubjectDialog = true },
-                    onDeleteSubject = { subjectToDelete = it }
+                    onDeleteSubject = { subjectToDelete = it },
+                    onAddDDayClick = { viewModel.setShowAddDDayDialog(true) }
                 )
 
-                1 -> ProgressTabContent(
+                1 -> PlannerTabContent(
+                    uiState = uiState,
+                    onToggleTodo = { viewModel.togglePlannerTodo(it) },
+                    onDeleteTodo = { viewModel.deletePlannerTodo(it) },
+                    onAddTodoClick = { viewModel.setShowAddTodoDialog(true) },
+                    onTimeBlockClick = { hour, blockIdx -> viewModel.toggleTimeBlock(hour, blockIdx) },
+                    onSelectTimeBlockSubject = { viewModel.setSelectedTimeBlockSubject(it) },
+                    onAddDDayClick = { viewModel.setShowAddDDayDialog(true) },
+                    onOpenStudygramDialog = { viewModel.openStudygramDialog() }
+                )
+
+                2 -> FocusTimerTabContent(
+                    uiState = uiState,
+                    onTogglePomodoro = { viewModel.togglePomodoroTimer() },
+                    onResetPomodoro = { viewModel.resetPomodoro() },
+                    onSelectPomodoroMode = { viewModel.setPomodoroMode(it) },
+                    onSelectPomodoroSubject = { viewModel.setPomodoroSubject(it) },
+                    onAddDDayClick = { viewModel.setShowAddDDayDialog(true) },
+                    onDeleteDDay = { viewModel.deleteDDayGoal(it) },
+                    onSignInWithGoogle = { idToken -> viewModel.signInWithGoogle(idToken) },
+                    onSignOut = { viewModel.signOut() },
+                    onBackupClick = { viewModel.backupDataToCloud() },
+                    onRestoreClick = { viewModel.restoreDataFromCloud() }
+                )
+
+                3 -> ProgressTabContent(
                     uiState = uiState,
                     onSubjectAddStudy = { subjectId ->
                         selectedSubjectForStudy = subjectId
@@ -301,7 +368,7 @@ fun HomeScreen(
                     onDeleteSubject = { subjectToDelete = it }
                 )
 
-                2 -> RecommendationTabContent(
+                4 -> RecommendationTabContent(
                     uiState = uiState,
                     onToggleRecommendation = handleToggleRecommendation,
                     onRecommendationAction = { rec ->
@@ -315,10 +382,7 @@ fun HomeScreen(
                         }
                     },
                     onGenerateSmartPlan = {
-                        val firstWeak = uiState.weakSubjects.firstOrNull()
-                        if (firstWeak != null) {
-                            viewModel.requestAIGeneratedClinic(firstWeak)
-                        }
+                        viewModel.analyzeWithGeminiAndRecommend()
                     },
                     onStartQuiz = { subject ->
                         quizLaunchConfig = QuizLaunchConfig(subject, isAiGenerated = false)
@@ -330,10 +394,6 @@ fun HomeScreen(
                         aiTutorSubject = subjectName
                         showAiTutorDialog = true
                     }
-                )
-
-                3 -> AiTutorScreenContent(
-                    initialSubject = aiTutorSubject
                 )
             }
         }
@@ -423,6 +483,56 @@ fun HomeScreen(
             }
         )
     }
+
+    // --- 상용 플래너 기능 다이얼로그들 ---
+    if (uiState.showStudygramDialog && uiState.studygramReport != null) {
+        StudygramShareDialog(
+            report = uiState.studygramReport!!,
+            onDismiss = { viewModel.closeStudygramDialog() }
+        )
+    }
+
+    if (uiState.showAddDDayDialog) {
+        AddDDayGoalDialog(
+            onDismiss = { viewModel.setShowAddDDayDialog(false) },
+            onConfirm = { title, date, color ->
+                viewModel.addDDayGoal(title, date, color)
+            }
+        )
+    }
+
+    if (uiState.showAddTodoDialog) {
+        AddPlannerTodoDialog(
+            subjects = uiState.subjects,
+            onDismiss = { viewModel.setShowAddTodoDialog(false) },
+            onConfirm = { title, subName, subId, mins ->
+                viewModel.addPlannerTodo(title, subName, subId, mins)
+            }
+        )
+    }
+
+    if (uiState.showCloudAccountDialog) {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { viewModel.setShowCloudAccountDialog(false) }) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight(),
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surface
+            ) {
+                CloudAccountBackupCard(
+                    currentUser = uiState.firebaseUser,
+                    isSyncing = uiState.isSyncing,
+                    syncMessage = uiState.syncMessage,
+                    lastBackupTime = uiState.lastBackupTime,
+                    onSignInWithGoogle = { idToken -> viewModel.signInWithGoogle(idToken) },
+                    onSignOut = { viewModel.signOut() },
+                    onBackupClick = { viewModel.backupDataToCloud() },
+                    onRestoreClick = { viewModel.restoreDataFromCloud() }
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -435,7 +545,8 @@ fun DashboardTabContent(
     onGoToWeakTab: () -> Unit,
     onOpenDailyReport: () -> Unit,
     onAddNewSubject: () -> Unit,
-    onDeleteSubject: (SubjectEntity) -> Unit
+    onDeleteSubject: (SubjectEntity) -> Unit,
+    onAddDDayClick: () -> Unit = {}
 ) {
     LazyColumn(
         modifier = Modifier
@@ -444,6 +555,15 @@ fun DashboardTabContent(
         contentPadding = PaddingValues(top = 16.dp, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // D-Day Target Goal Countdown Banner
+        item {
+            DDayGoalHeaderBanner(
+                ddayGoals = uiState.ddayGoals,
+                onAddGoalClick = onAddDDayClick,
+                onGoalClick = { }
+            )
+        }
+
         // Daily Report Quick Banner Card
         item {
             Card(
@@ -530,18 +650,24 @@ fun DashboardTabContent(
         }
 
         // Weak subject diagnosis alert card (if any)
-        if (uiState.weakSubjects.isNotEmpty()) {
+        if (uiState.weakSubjects.isNotEmpty() || uiState.aiAnalysisSummary != null) {
             item {
                 WeakSubjectDiagnosisBanner(
                     weakSubjects = uiState.weakSubjects,
-                    onGeneratePlan = onGoToWeakTab
+                    onGeneratePlan = onGoToWeakTab,
+                    isAnalyzing = uiState.isAnalyzingWithGemini,
+                    aiSummary = uiState.aiAnalysisSummary
                 )
             }
         }
 
-        // Weekly study bar chart
+        // Recharts Interactive Learning Progress & Subject Study Time Chart
         item {
-            WeeklyStudyBarChart(weeklyMinutes = uiState.weeklyMinutes)
+            RechartsLearningProgressChart(
+                analyticsSummary = uiState.analyticsSummary,
+                subjects = uiState.subjects,
+                onSubjectClick = onSubjectAddStudy
+            )
         }
 
         // 📚 관리 중인 학습 과목 리스트 (Main Dashboard Subject Management Section)
@@ -743,6 +869,153 @@ fun DashboardTabContent(
 }
 
 @Composable
+fun PlannerTabContent(
+    uiState: LearningUiState,
+    onToggleTodo: (com.example.data.model.PlannerTodoEntity) -> Unit,
+    onDeleteTodo: (com.example.data.model.PlannerTodoEntity) -> Unit,
+    onAddTodoClick: () -> Unit,
+    onTimeBlockClick: (hour: Int, blockIndex: Int) -> Unit,
+    onSelectTimeBlockSubject: (SubjectEntity) -> Unit,
+    onAddDDayClick: () -> Unit,
+    onOpenStudygramDialog: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyColumn(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        contentPadding = PaddingValues(top = 16.dp, bottom = 96.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // D-Day Countdown Banner
+        item {
+            DDayGoalHeaderBanner(
+                ddayGoals = uiState.ddayGoals,
+                onAddGoalClick = onAddDDayClick,
+                onGoalClick = { }
+            )
+        }
+
+        // Daily To-Do Checklist
+        item {
+            DailyTodoListCard(
+                todos = uiState.plannerTodos,
+                onToggleTodo = onToggleTodo,
+                onDeleteTodo = onDeleteTodo,
+                onAddTodoClick = onAddTodoClick
+            )
+        }
+
+        // 10-Minute Timetable Grid
+        item {
+            TenMinutePlannerCard(
+                timeBlocks = uiState.timeBlocks,
+                subjects = uiState.subjects,
+                selectedSubject = uiState.selectedTimeBlockSubject,
+                onSelectSubject = onSelectTimeBlockSubject,
+                onCellClick = onTimeBlockClick
+            )
+        }
+
+        // Quick SNS share banner
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onOpenStudygramDialog),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF312E81))
+            ) {
+                Row(
+                    modifier = Modifier.padding(18.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = "📸", fontSize = 28.sp)
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "오늘 하루 공부 인증 카드 만들기",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "순공 시간과 To-Do 달성률을 인스타그램 스토리로 공유하세요!",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFFA5B4FC)
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = Color.White
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FocusTimerTabContent(
+    uiState: LearningUiState,
+    onTogglePomodoro: () -> Unit,
+    onResetPomodoro: () -> Unit,
+    onSelectPomodoroMode: (com.example.data.model.PomodoroMode) -> Unit,
+    onSelectPomodoroSubject: (SubjectEntity) -> Unit,
+    onAddDDayClick: () -> Unit,
+    onDeleteDDay: (com.example.data.model.DDayGoalEntity) -> Unit,
+    onSignInWithGoogle: (String) -> Unit,
+    onSignOut: () -> Unit,
+    onBackupClick: () -> Unit,
+    onRestoreClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyColumn(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        contentPadding = PaddingValues(top = 16.dp, bottom = 96.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Circular Pomodoro Timer
+        item {
+            PomodoroTimerCard(
+                timerState = uiState.pomodoroState,
+                subjects = uiState.subjects,
+                onToggleStartPause = onTogglePomodoro,
+                onResetTimer = onResetPomodoro,
+                onSelectMode = onSelectPomodoroMode,
+                onSelectSubject = onSelectPomodoroSubject
+            )
+        }
+
+        // D-Day Goals Target Banner
+        item {
+            DDayGoalHeaderBanner(
+                ddayGoals = uiState.ddayGoals,
+                onAddGoalClick = onAddDDayClick,
+                onGoalClick = { }
+            )
+        }
+
+        // Cloud Account & Data Backup / Restore Card
+        item {
+            CloudAccountBackupCard(
+                currentUser = uiState.firebaseUser,
+                isSyncing = uiState.isSyncing,
+                syncMessage = uiState.syncMessage,
+                lastBackupTime = uiState.lastBackupTime,
+                onSignInWithGoogle = onSignInWithGoogle,
+                onSignOut = onSignOut,
+                onBackupClick = onBackupClick,
+                onRestoreClick = onRestoreClick
+            )
+        }
+    }
+}
+
+@Composable
 fun ProgressTabContent(
     uiState: LearningUiState,
     onSubjectAddStudy: (Long) -> Unit,
@@ -775,6 +1048,15 @@ fun ProgressTabContent(
                 text = "단원 이수율과 목표 점수 달성 현황을 한눈에 파악하세요.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        // Recharts Interactive Learning Progress & Subject Study Time Chart
+        item {
+            RechartsLearningProgressChart(
+                analyticsSummary = uiState.analyticsSummary,
+                subjects = uiState.subjects,
+                onSubjectClick = onSubjectAddStudy
             )
         }
 
@@ -899,7 +1181,9 @@ fun RecommendationTabContent(
         item {
             WeakSubjectDiagnosisBanner(
                 weakSubjects = uiState.weakSubjects,
-                onGeneratePlan = onGenerateSmartPlan
+                onGeneratePlan = onGenerateSmartPlan,
+                isAnalyzing = uiState.isAnalyzingWithGemini,
+                aiSummary = uiState.aiAnalysisSummary
             )
         }
 

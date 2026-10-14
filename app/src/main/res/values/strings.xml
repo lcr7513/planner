@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">학습매니저</string>
+    <string name="default_web_client_id" translatable="false">977581042117-svfsgt02l49mt5lnfbnb5g5duu2cp0a4.apps.googleusercontent.com</string>
 </resources>
